@@ -1,0 +1,56 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "title": "Юбка вязаная",
+      "price": 2000,
+      "description": "Белая вязаная юбка баска как в Pinterest",
+      "style": "Minimalim",
+      "color": "Белый",
+      "photo_id": "AgACAgIAAxkBAAMOaTr8fz9XNsVNsps51SAEP-s0w9QAAr78MRv16uBK3sd29CINWOMBAAMCAAN5AAM2BA",
+      "user_id": 1343158289,
+      "username": "miilsvk",
+      "status": "approved",
+      "created_at": "2025-12-11 20:25:28"
+    },
+    {
+      "id": 2,
+      "title": "Блуза черная",
+      "price": 3000,
+      "description": "Черная кружевная блуза, состав 100% хлопок, ручная работа",
+      "style": "🦇 Goth",
+      "color": "Черный",
+      "photo_id": "AgACAgIAAxkBAANLaTshJNSj-SvYpXx0IUQx3QK2KyoAAnsNaxshv3lI-IEj6EJVDbgBAAMCAAN5AAM2BA",
+      "user_id": 1343158289,
+      "username": "miilsvk",
+      "status": "approved",
+      "created_at": "2025-12-11 22:53:08"
+    },
+    {
+      "id": 3,
+      "title": "Винтажная футболка",
+      "price": 2500,
+      "description": "Бежевая винтажная футболка, 100% хлопок",
+      "style": "📻 Vintage",
+      "color": "Персиковый",
+      "photo_id": "AgACAgIAAxkBAANbaTshw4rUf5ONYl0jRWWzNOg5YdQAAgMLMhuWg2FLGSHHB81hyf4BAAMCAAN5AAM2BA",
+      "user_id": 1343158289,
+      "username": "miilsvk",
+      "status": "approved",
+      "created_at": "2025-12-11 22:55:47"
+    },
+    {
+      "id": 4,
+      "title": "Шопер",
+      "price": 300,
+      "description": "Крутой хлопковый шопер белого цвета",
+      "style": "👔 Classic",
+      "color": "Белый",
+      "photo_id": "AgACAgIAAxkBAANxaTslT2KIwkjZ32_lewABftoatxEDAALpDmsb8vPYSerOf3M-PPf3AQADAgADeQADNgQ",
+      "user_id": 832174606,
+      "username": "Без имени",
+      "status": "approved",
+      "created_at": "2025-12-11 23:10:56"
+    }
+  ]
+}
