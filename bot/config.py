@@ -1,8 +1,10 @@
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv # <-- Эту строку можно удалить
 
-load_dotenv()
+# load_dotenv() # <-- Эту строку можно удалить
 
+# Теперь переменные считываются ИЗ ОКРУЖЕНИЯ КОНТЕЙНЕРА,
+# куда их передал Docker Compose.
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_CHAT_ID = int(os.getenv('ADMIN_CHAT_ID', 0))
 

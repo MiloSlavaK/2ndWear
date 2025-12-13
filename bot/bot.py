@@ -5,6 +5,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from config import BOT_TOKEN, ADMIN_CHAT_ID, user_data_temp
 from database import add_product
 from config import BOT_TOKEN, ADMIN_CHAT_ID, user_data_temp, STYLES, COLORS
+from api import get_or_create_user_in_backend, create_product_in_backend
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -77,6 +78,12 @@ async def contact_seller(product_id, context, query):
 
 # Основные функции бота
 async def start(update: Update, context):
+    user_id = update.message.from_user.id
+    db_id = await get_or_create_user_in_backend(user_id)
+    if db_id is None:
+        await update.message.reply_text("❌ Ошибка соединения с сервером. Попробуйте позже.")
+        return
+    context.user_data['db_id'] = db_id
     # Создаем постоянное меню
     keyboard = [
         ["📤 Добавить товар"],
@@ -84,11 +91,11 @@ async def start(update: Update, context):
         ["ℹ️ Помощь", "👤 Профиль"]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
-
     await update.message.reply_text(
-        '👋 Добро пожаловать в 2ndWear!\n'
+        f'👋 Добро пожаловать в 2ndWear! Ваш ID в системе: **{db_id}**\n' # ДЛЯ ТЕСТА
         'Продавайте и покупайте одежду с историей.',
-        reply_markup=reply_markup
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
     )
 
 
@@ -244,26 +251,49 @@ async def get_color(update: Update, context):
 
 async def get_photo(update: Update, context):
     user_id = update.message.from_user.id
-    photo_file = await update.message.photo[-1].get_file()
+
+    # Проверяем, авторизован ли пользователь и есть ли DB_ID
+    seller_db_id = context.user_data.get('db_id')
+    if not seller_db_id:
+         await update.message.reply_text("❌ Пожалуйста, выполните команду /start для авторизации.")
+         return ConversationHandler.END
+
+    # Получаем file_id
+    photo_file = update.message.photo[-1]
 
     item = user_data_temp.get(user_id, {})
     item['photo_id'] = photo_file.file_id
-    item['user_id'] = user_id
+    item['user_id'] = user_id # Telegram ID
     item['username'] = update.message.from_user.username or "Без имени"
 
-    # Сохраняем в JSON
-    product_id = add_product(item)
+    # Создаем тело запроса для FastAPI (schemas.ProductCreate)
+    product_data_for_api = {
+        "title": item.get('title'),
+        "description": item.get('description'),
+        "price": item.get('price'),
+        "style": item.get('style'),
+        "color": item.get('color'),
+        "status": "pending", # Начальный статус
+        # Используем file_id как "ссылку" на фото для MVP
+        "image_url": item['photo_id'] 
+    }
 
+    # 1. Отправляем в бэкенд
+    try:
+        new_product = await create_product_in_backend(product_data_for_api, seller_db_id)
+        product_id = new_product.get('id')
+    except Exception as e:
+        logger.error(f"Failed to create product via API: {e}")
+        await update.message.reply_text("❌ Произошла ошибка при сохранении товара на сервере.")
+        return ConversationHandler.END
     await update.message.reply_text(f"""
-✅ Товар #{product_id} добавлен на модерацию!
-📌 {item.get('title')}
-💰 {item.get('price')} руб.
-🎨 {item.get('style')}
+        ✅ Товар #{product_id} добавлен на модерацию!
+        📌 {item.get('title')}
+        💰 {item.get('price')} руб.
+        🎨 {item.get('style')}
+        Модератор проверит его в течение 24 часов.
+            """)
 
-Модератор проверит его в течение 24 часов.
-    """)
-
-    # Отправляем админу
     if ADMIN_CHAT_ID:
         keyboard = [
             [
