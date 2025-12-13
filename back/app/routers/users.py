@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from ..db import SessionLocal
 from .. import crud, schemas, models
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -15,10 +17,12 @@ def get_db():
         db.close()
 
 
+
 @router.post("/", response_model=schemas.User)
 def create_user(data: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(models.User.username == data.username).first()
     if existing:
+        logger.warning("Attempt to create duplicate user: %s", data.username)
         raise HTTPException(status_code=400, detail="Username already exists")
 
     return crud.create_user(db, data)
