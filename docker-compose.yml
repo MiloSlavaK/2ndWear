@@ -30,6 +30,19 @@ services:
     ports:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  
+  telegram_bot:
+    build:
+      context: ./bot
+    container_name: telegram_bot
+    depends_on:
+      backend:
+        condition: service_started 
+    env_file:
+      - ./.env
+    environment:
+      BACKEND_API_URL: http://backend:8000
+    restart: always 
 
 volumes:
   postgres_data:
