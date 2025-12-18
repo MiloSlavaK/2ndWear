@@ -15,11 +15,15 @@ def get_or_create_user(db: Session, telegram_id: str):
     user = db.query(models.User).filter(models.User.telegram_id == telegram_id).first()
     if user:
         return user
-
     user = models.User(username=f"user_{telegram_id}", telegram_id=telegram_id)
-    db.add(user)
-    db.commit()
-    return user
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    except IntegrityError:
+        db.rollback()
+        return db.query(models.User).filter(models.User.telegram_id == telegram_id).first()
 
 
 def create_product(db: Session, data: schemas.ProductCreate, seller_id: int):
