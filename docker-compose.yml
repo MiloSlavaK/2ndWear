@@ -31,6 +31,12 @@ services:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
   
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+  
   telegram_bot:
     build:
       context: ./bot
@@ -38,10 +44,14 @@ services:
     depends_on:
       backend:
         condition: service_started 
+      redis:
+        condition: service_started
     env_file:
       - ./.env
     environment:
       BACKEND_API_URL: http://backend:8000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     restart: always 
 
 volumes:
