@@ -26,7 +26,10 @@ export function ProductCard({ product }: ProductCardProps) {
         />
       </div>
       <div className="p-4">
-        <h3 className="mb-1">{product.name}</h3>
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="flex-1">{product.name}</h3>
+          <span className="text-xs text-muted-foreground ml-2">#{product.id.toString().padStart(4, '0')}</span>
+        </div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-muted-foreground">Размер: {product.size}</p>
           <p className="text-primary">{product.price} ₽</p>
