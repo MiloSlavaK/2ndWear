@@ -5,14 +5,16 @@ from datetime import datetime
 
 
 class UserCreate(BaseModel):
-    username: str
+    username: Optional[str] = None
     telegram_id: Optional[str] = None
+    contact: Optional[str] = None
 
 
 class User(BaseModel):
     id: str
-    username: str
+    username: Optional[str] = None
     telegram_id: Optional[str] = None
+    contact: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -36,6 +38,9 @@ class ProductCreate(BaseModel):
     price: float
     category_id: Optional[int] = None
     image_url: Optional[str] = None
+    image_key: Optional[str] = None
+    seller_username: Optional[str] = None
+    seller_contact: Optional[str] = None
     # Новые поля для фильтрации
     size: Optional[str] = None
     color: Optional[str] = None
@@ -52,8 +57,10 @@ class Product(BaseModel):
     price: float
     category_id: Optional[int]
     image_url: Optional[str]
+    image_key: Optional[str]
     seller_id: str
     seller_username: Optional[str] = None  # Username продавца для покупателей
+    seller_contact: Optional[str] = None
     # Поля фильтрации
     size: Optional[str]
     color: Optional[str]

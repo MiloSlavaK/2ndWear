@@ -1,8 +1,8 @@
 import logging
 logger = logging.getLogger(__name__)
 
-from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import Router, F, Bot
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton, ContentType
 from aiogram.fsm.context import FSMContext
 
 from app.states.add_product import AddProductState
@@ -15,16 +15,51 @@ api = BackendAPI()
 
 @router.message(F.text == "📤 Добавить товар")
 async def start_add_product(message: Message, state: FSMContext):
-    
     await state.clear()
-    await state.set_state(AddProductState.title)
 
+    # Если у пользователя есть username — сохраняем и идём дальше
+    seller_username = message.from_user.username
+    if seller_username:
+        await state.update_data(seller_username=seller_username)
+        await state.set_state(AddProductState.title)
+        await message.answer(
+            "📦 Добавление товара\n\n"
+            "Введите название товара:\n\n"
+            "Для отмены — /cancel"
+        )
+    else:
+        # Нет username → запросим контакт
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="📱 Отправить контакт", request_contact=True)]],
+            resize_keyboard=True,
+            one_time_keyboard=True,
+        )
+        await state.set_state(AddProductState.contact)
+        await message.answer(
+            "🔐 У вас нет публичного username в Telegram.\n"
+            "Отправьте контакт, чтобы покупатели могли связаться с вами.",
+            reply_markup=keyboard
+        )
+
+    logger.info("FSM AddProduct started: telegram_id=%s", message.from_user.id)
+
+
+@router.message(AddProductState.contact, F.contact)
+async def add_contact(message: Message, state: FSMContext):
+    phone = message.contact.phone_number
+    await state.update_data(seller_contact=phone)
+    await state.set_state(AddProductState.title)
     await message.answer(
         "📦 Добавление товара\n\n"
         "Введите название товара:\n\n"
-        "Для отмены — /cancel"
+        "Для отмены — /cancel",
+        reply_markup=ReplyKeyboardRemove()
     )
-    logger.info("FSM AddProduct started: telegram_id=%s", message.from_user.id)
+
+
+@router.message(AddProductState.contact)
+async def require_contact(message: Message):
+    await message.answer("❌ Нажмите кнопку '📱 Отправить контакт' для продолжения")
 
 
 @router.message(AddProductState.title)
@@ -192,9 +227,16 @@ async def add_section(message: Message, state: FSMContext):
 
 
 @router.message(AddProductState.photo, F.photo)
-async def add_photo(message: Message, state: FSMContext):
+async def add_photo(message: Message, state: FSMContext, bot: Bot):
     photo_id = message.photo[-1].file_id
-    await state.update_data(image_url=photo_id)
+
+    # Download file from Telegram and upload to backend (MinIO)
+    file = await bot.get_file(photo_id)
+    file_path = file.file_path
+    file_bytes = await bot.download_file(file_path)
+    upload_result = await api.upload_image(file_bytes.read(), filename="product.jpg")
+
+    await state.update_data(image_url=upload_result.get("image_url"), image_key=upload_result.get("image_key"))
 
     data = await state.get_data()
 
@@ -240,16 +282,20 @@ async def confirm_cancel(message: Message, state: FSMContext):
 
 
 @router.message(AddProductState.confirm, F.text == "✅ Подтвердить")
-async def confirm_add_product(message: Message, state: FSMContext, user_id: int):
+async def confirm_add_product(message: Message, state: FSMContext, user_id: str):
     """Отправить товар в backend"""
     from app.keyboards.common import main_menu
     
     data = await state.get_data()
     
     try:
+        # Собираем данные продавца
+        seller_username = data.get("seller_username") or message.from_user.username
+        seller_contact = data.get("seller_contact")
+
         product = await api.create_product(
             seller_id=user_id,  # user_id из UserMiddleware
-            data=data,
+            data={**data, "seller_username": seller_username, "seller_contact": seller_contact},
         )
         await state.clear()
         await message.answer(

@@ -36,12 +36,14 @@ async def buy_handler(message: Message, state: FSMContext, user_id: int):
         response_text = f"🛍 Товары на продажу ({len(products)} шт.):\n\n"
         
         for idx, product in enumerate(products, 1):
-            seller_username = product.get('seller_username', 'Неизвестно')
+            seller_username = product.get('seller_username')
+            seller_contact = product.get('seller_contact')
+            seller_display = f"@{seller_username}" if seller_username else (seller_contact or "Нет контакта")
             product_info = (
                 f"{idx}. {product['title']}\n"
                 f"   💰 Цена: {product['price']} ₽\n"
                 f"   📝 {product.get('description', 'Без описания')[:50]}\n"
-                f"   👤 Продавец: @{seller_username}\n"
+                f"   👤 Продавец: {seller_display}\n"
             )
             response_text += product_info
         

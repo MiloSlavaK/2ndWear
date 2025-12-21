@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .db import Base, engine
-from .routers import users, products, orders, messages, categories
+from .routers import users, products, orders, messages, categories, media
 from .logger import setup_logging
 import logging
 from fastapi import Request
@@ -39,6 +39,7 @@ app.add_middleware(
 )
 
 
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
@@ -57,6 +58,7 @@ async def log_requests(request: Request, call_next):
 
 
 # Регистрация роутеров
+app.include_router(media.router, prefix="/media", tags=["media"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(products.router, prefix="/products", tags=["products"])
 app.include_router(categories.router, prefix="/categories", tags=["categories"])

@@ -68,10 +68,13 @@ def list_products(
         limit=limit
     )
     
-    # Добавляем seller_username для каждого товара
+    # Добавляем seller_username/contact для каждого товара
     for product in products:
         if product.seller:
-            product.seller_username = product.seller.username
+            if not product.seller_username:
+                product.seller_username = product.seller.username
+            if not product.seller_contact:
+                product.seller_contact = product.seller.contact
     
     return products
 
@@ -82,7 +85,10 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
     product = crud.get_product(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    # Добавляем username продавца в response
+    # Добавляем username/contact продавца в response
     if product.seller:
-        product.seller_username = product.seller.username
+        if not product.seller_username:
+            product.seller_username = product.seller.username
+        if not product.seller_contact:
+            product.seller_contact = product.seller.contact
     return product

@@ -2,6 +2,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class AddProductState(StatesGroup):
+    contact = State()
     title = State()
     price = State()
     description = State()

@@ -37,9 +37,8 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/telegram/{telegram_id}", response_model=schemas.User)
-def get_or_create_telegram_user(telegram_id: str, db: Session = Depends(get_db)):
-    """
-    Endpoint для Telegram-бота.
-    Позволяет быстро создать или получить пользователя по telegram_id.
-    """
-    return crud.get_or_create_user(db, telegram_id)
+def get_or_create_telegram_user(telegram_id: str, data: schemas.UserCreate | None = None, db: Session = Depends(get_db)):
+    """Endpoint for Telegram bot to sync username/contact."""
+    username = data.username if data else None
+    contact = data.contact if data else None
+    return crud.get_or_create_user(db, telegram_id, username=username, contact=contact)

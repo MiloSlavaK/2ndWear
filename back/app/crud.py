@@ -12,11 +12,22 @@ def create_user(db: Session, data: schemas.UserCreate):
     return user
 
 
-def get_or_create_user(db: Session, telegram_id: str):
+def get_or_create_user(db: Session, telegram_id: str, username: str | None = None, contact: str | None = None):
     user = db.query(models.User).filter(models.User.telegram_id == telegram_id).first()
     if user:
+        updated = False
+        if username and user.username != username:
+            user.username = username
+            updated = True
+        if contact and user.contact != contact:
+            user.contact = contact
+            updated = True
+        if updated:
+            db.commit()
+            db.refresh(user)
         return user
-    user = models.User(username=f"user_{telegram_id}", telegram_id=telegram_id)
+
+    user = models.User(username=username, telegram_id=telegram_id, contact=contact)
     try:
         db.add(user)
         db.commit()

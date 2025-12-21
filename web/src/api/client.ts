@@ -65,13 +65,16 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
 }
 
 export interface Product {
-    id: number;
+    id: string;
     title: string;
     description?: string;
     price: number;
     category_id?: number;
     image_url?: string;
-    seller_id: number;
+    image_key?: string;
+    seller_id: string;
+    seller_username?: string;
+    seller_contact?: string;
     size?: string;
     color?: string;
     style?: string;
@@ -134,7 +137,7 @@ export async function getProducts(filters?: {
     return fetchAPI(endpoint);
 }
 
-export async function getProduct(productId: number): Promise<Product> {
+export async function getProduct(productId: string): Promise<Product> {
     return fetchAPI(`/products/${productId}`);
 }
 

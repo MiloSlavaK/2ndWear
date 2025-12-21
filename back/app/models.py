@@ -15,8 +15,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String(32), primary_key=True, index=True, default=generate_uuid)
-    username = Column(String, unique=True, nullable=False)
+    username = Column(String, unique=True, nullable=True)
     telegram_id = Column(String, nullable=True)
+    contact = Column(String, nullable=True)  # телефон или иной контакт
 
     products = relationship("Product", back_populates="seller")
     messages = relationship("Message", back_populates="sender")
@@ -43,6 +44,9 @@ class Product(Base):
     description = Column(Text, nullable=True)
     price = Column(Float, nullable=False)
     image_url = Column(String, nullable=True)
+    image_key = Column(String, nullable=True)
+    seller_username = Column(String, nullable=True)
+    seller_contact = Column(String, nullable=True)
 
     # Новые поля для фильтрации (из требований фронтенда)
     size = Column(String, nullable=True)  # XS, S, M, L, XL
