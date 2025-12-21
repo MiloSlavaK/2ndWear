@@ -51,12 +51,122 @@ async def add_price(message: Message, state: FSMContext):
 async def add_description(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
     await state.set_state(AddProductState.category)
-    await message.answer("🏷 Укажите категорию товара:")
+    await message.answer("🏷 Укажите категорию товара (например: Одежда, Обувь, Аксессуары):")
 
 
 @router.message(AddProductState.category)
 async def add_category(message: Message, state: FSMContext):
     await state.update_data(category=message.text)
+    
+    # Клавиатура с размерами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="XS")],
+            [KeyboardButton(text="S")],
+            [KeyboardButton(text="M")],
+            [KeyboardButton(text="L")],
+            [KeyboardButton(text="XL")],
+            [KeyboardButton(text="XXL")],
+            [KeyboardButton(text="Не указан")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await state.set_state(AddProductState.size)
+    await message.answer("📏 Выберите размер:", reply_markup=keyboard)
+
+
+@router.message(AddProductState.size)
+async def add_size(message: Message, state: FSMContext):
+    await state.update_data(size=message.text)
+    
+    # Клавиатура с цветами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Чёрный"), KeyboardButton(text="Белый")],
+            [KeyboardButton(text="Красный"), KeyboardButton(text="Синий")],
+            [KeyboardButton(text="Зелёный"), KeyboardButton(text="Жёлтый")],
+            [KeyboardButton(text="Серый"), KeyboardButton(text="Другой")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await state.set_state(AddProductState.color)
+    await message.answer("🎨 Выберите цвет:", reply_markup=keyboard)
+
+
+@router.message(AddProductState.color)
+async def add_color(message: Message, state: FSMContext):
+    await state.update_data(color=message.text)
+    
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Casual"), KeyboardButton(text="Formal")],
+            [KeyboardButton(text="Sport"), KeyboardButton(text="Boho")],
+            [KeyboardButton(text="Vintage"), KeyboardButton(text="Other")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await state.set_state(AddProductState.style)
+    await message.answer("👗 Выберите стиль:", reply_markup=keyboard)
+
+
+@router.message(AddProductState.style)
+async def add_style(message: Message, state: FSMContext):
+    await state.update_data(style=message.text)
+    
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Мужской"), KeyboardButton(text="Женский")],
+            [KeyboardButton(text="Унисекс"), KeyboardButton(text="Детский")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await state.set_state(AddProductState.gender)
+    await message.answer("👥 Для кого:", reply_markup=keyboard)
+
+
+@router.message(AddProductState.gender)
+async def add_gender(message: Message, state: FSMContext):
+    await state.update_data(gender=message.text)
+    
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Отличное"), KeyboardButton(text="Хорошее")],
+            [KeyboardButton(text="Нормальное"), KeyboardButton(text="Требует чистки")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await state.set_state(AddProductState.condition)
+    await message.answer("✨ Состояние товара:", reply_markup=keyboard)
+
+
+@router.message(AddProductState.condition)
+async def add_condition(message: Message, state: FSMContext):
+    await state.update_data(condition=message.text)
+    
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="market"), KeyboardButton(text="swop")],
+            [KeyboardButton(text="charity")],
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await state.set_state(AddProductState.section)
+    await message.answer("📂 Выберите раздел:\n• market - продажа\n• swop - обмен\n• charity - бесплатно", reply_markup=keyboard)
+
+
+@router.message(AddProductState.section)
+async def add_section(message: Message, state: FSMContext):
+    if message.text not in ["market", "swop", "charity"]:
+        await message.answer("❌ Пожалуйста, выберите один из предложенных вариантов")
+        return
+    
+    await state.update_data(section=message.text)
     await state.set_state(AddProductState.photo)
     await message.answer("📸 Отправьте фото товара:")
 
@@ -72,7 +182,14 @@ async def add_photo(message: Message, state: FSMContext):
         "🔎 Проверьте данные товара:\n\n"
         f"Название: {data['title']}\n"
         f"Цена: {data['price']} ₽\n"
-        f"Описание: {data['description']}\n\n"
+        f"Описание: {data['description']}\n"
+        f"Категория: {data['category']}\n"
+        f"Размер: {data['size']}\n"
+        f"Цвет: {data['color']}\n"
+        f"Стиль: {data['style']}\n"
+        f"Для: {data['gender']}\n"
+        f"Состояние: {data['condition']}\n"
+        f"Раздел: {data['section']}\n\n"
         "Подтвердить добавление?"
     )
 
@@ -102,28 +219,30 @@ async def confirm_cancel(message: Message, state: FSMContext):
 
 @router.message(AddProductState.confirm, F.text == "✅ Подтвердить")
 async def confirm_add_product(message: Message, state: FSMContext, user_id: int):
+    """Отправить товар в backend"""
     data = await state.get_data()
-    seller_id = message.from_user.id  # временно, позже будет backend user_id
+    
     try:
         product = await api.create_product(
-            seller_id=user_id,
+            seller_id=user_id,  # user_id из UserMiddleware
             data=data,
         )
-    except Exception:
+        await state.clear()
+        await message.answer(
+            "✅ Товар успешно добавлен!\n\n"
+            f"ID товара: {product['id']}\n"
+            "Он уже доступен на нашем сайте."
+        )
+        logger.info(
+            "FSM AddProduct completed: telegram_id=%s user_id=%s product_id=%s",
+            message.from_user.id,
+            user_id,
+            product['id'],
+        )
+    except Exception as e:
         await message.answer(
             "❌ Ошибка при сохранении товара.\n"
-            "Попробуйте позже."
+            "Попробуйте позже или свяжитесь с поддержкой."
         )
-        logger.exception("Failed to create product")
+        logger.exception("Failed to create product: user_id=%s error=%s", user_id, e)
         return
-
-    await state.clear()
-    await message.answer(
-        "✅ Товар подтверждён.\n\n"
-        "На следующем этапе мы отправим его в backend."
-    )
-    logger.info(
-        "FSM AddProduct confirmed: telegram_id=%s data=%s",
-        message.from_user.id,
-        data,
-    )

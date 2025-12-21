@@ -27,6 +27,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg2://secondwear:secondwear@postgres:5432/secondwear
+      FRONTEND_URL: http://localhost:5173
+      TELEGRAM_BOT_URL: http://telegram_bot:8080
     ports:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -48,6 +50,28 @@ services:
         condition: service_started
     env_file:
       - ./.env
+    environment:
+      BACKEND_API_URL: http://backend:8000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+  web:
+    build:
+      context: ./web
+    container_name: web_frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://backend:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
     environment:
       BACKEND_API_URL: http://backend:8000
       REDIS_HOST: redis

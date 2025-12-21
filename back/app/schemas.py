@@ -12,6 +12,19 @@ class UserCreate(BaseModel):
 class User(BaseModel):
     id: int
     username: str
+    telegram_id: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+class CategoryCreate(BaseModel):
+    name: str
+
+
+class Category(BaseModel):
+    id: int
+    name: str
 
     class Config:
         orm_mode = True
@@ -19,10 +32,17 @@ class User(BaseModel):
 
 class ProductCreate(BaseModel):
     title: str
-    description: Optional[str]
+    description: Optional[str] = None
     price: float
-    category: Optional[str]
-    image_url: Optional[str]
+    category_id: Optional[int] = None
+    image_url: Optional[str] = None
+    # Новые поля для фильтрации
+    size: Optional[str] = None
+    color: Optional[str] = None
+    style: Optional[str] = None
+    gender: Optional[str] = None
+    condition: Optional[str] = None
+    section: str = "market"  # market, swop, charity
 
 
 class Product(BaseModel):
@@ -30,9 +50,16 @@ class Product(BaseModel):
     title: str
     description: Optional[str]
     price: float
-    category: Optional[str]
+    category_id: Optional[int]
     image_url: Optional[str]
     seller_id: int
+    # Поля фильтрации
+    size: Optional[str]
+    color: Optional[str]
+    style: Optional[str]
+    gender: Optional[str]
+    condition: Optional[str]
+    section: str
     created_at: datetime
 
     class Config:
@@ -49,6 +76,7 @@ class Message(BaseModel):
     id: int
     text: str
     sender_id: int
+    product_id: int
     created_at: datetime
 
     class Config:
