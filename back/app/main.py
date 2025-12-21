@@ -22,9 +22,17 @@ app = FastAPI(title="2ndWear API", version="1.0.0")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 TELEGRAM_BOT_URL = os.getenv("TELEGRAM_BOT_URL", "http://localhost:3000")
 
+# Получаем внешний URL из переменной окружения (для деплоя)
+EXTERNAL_FRONTEND_URL = os.getenv("EXTERNAL_FRONTEND_URL", "")
+
+# Формируем список разрешенных origins
+allowed_origins = [FRONTEND_URL, TELEGRAM_BOT_URL, "http://localhost:5173", "http://localhost:3000"]
+if EXTERNAL_FRONTEND_URL:
+    allowed_origins.append(EXTERNAL_FRONTEND_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, TELEGRAM_BOT_URL, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

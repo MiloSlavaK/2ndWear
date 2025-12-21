@@ -28,6 +28,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://secondwear:secondwear@postgres:5432/secondwear
       FRONTEND_URL: http://localhost:5173
+      EXTERNAL_FRONTEND_URL: http://84.252.140.49:5173
       TELEGRAM_BOT_URL: http://telegram_bot:8080
     ports:
       - "8000:8000"

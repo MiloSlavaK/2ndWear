@@ -10,7 +10,7 @@ class UserCreate(BaseModel):
 
 
 class User(BaseModel):
-    id: int
+    id: str
     username: str
     telegram_id: Optional[str] = None
 
@@ -46,13 +46,14 @@ class ProductCreate(BaseModel):
 
 
 class Product(BaseModel):
-    id: int
+    id: str
     title: str
     description: Optional[str]
     price: float
     category_id: Optional[int]
     image_url: Optional[str]
-    seller_id: int
+    seller_id: str
+    seller_username: Optional[str] = None  # Username продавца для покупателей
     # Поля фильтрации
     size: Optional[str]
     color: Optional[str]
@@ -67,16 +68,16 @@ class Product(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    product_id: int
-    sender_id: int
+    product_id: str
+    sender_id: str
     text: str
 
 
 class Message(BaseModel):
-    id: int
+    id: str
     text: str
-    sender_id: int
-    product_id: int
+    sender_id: str
+    product_id: str
     created_at: datetime
 
     class Config:
@@ -84,14 +85,14 @@ class Message(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    buyer_id: int
-    product_id: int
+    buyer_id: str
+    product_id: str
 
 
 class Order(BaseModel):
-    id: int
-    buyer_id: int
-    product_id: int
+    id: str
+    buyer_id: str
+    product_id: str
     status: str
     created_at: datetime
 

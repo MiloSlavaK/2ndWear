@@ -36,16 +36,18 @@ async def buy_handler(message: Message, state: FSMContext, user_id: int):
         response_text = f"🛍 Товары на продажу ({len(products)} шт.):\n\n"
         
         for idx, product in enumerate(products, 1):
+            seller_username = product.get('seller_username', 'Неизвестно')
             product_info = (
                 f"{idx}. {product['title']}\n"
                 f"   💰 Цена: {product['price']} ₽\n"
                 f"   📝 {product.get('description', 'Без описания')[:50]}\n"
+                f"   👤 Продавец: @{seller_username}\n"
             )
             response_text += product_info
         
         response_text += (
-            "\n\n⚠️ Пока система находится в разработке.\n"
-            "Свяжитесь с продавцом через Telegram для покупки."
+            "\n\n💬 Для покупки напишите продавцу в Telegram.\n"
+            "Система сделок в разработке."
         )
         
         kb = main_menu()

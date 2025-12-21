@@ -3,12 +3,18 @@ from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Tex
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .db import Base
+import uuid
+
+
+def generate_uuid():
+    """Генерирует UUID как строку без дефисов (32 символа)"""
+    return uuid.uuid4().hex
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(32), primary_key=True, index=True, default=generate_uuid)
     username = Column(String, unique=True, nullable=False)
     telegram_id = Column(String, nullable=True)
 
@@ -29,8 +35,8 @@ class Category(Base):
 class Product(Base):
     __tablename__ = "products"
 
-    id = Column(Integer, primary_key=True, index=True)
-    seller_id = Column(Integer, ForeignKey("users.id"))
+    id = Column(String(32), primary_key=True, index=True, default=generate_uuid)
+    seller_id = Column(String(32), ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)  # FK на Category
     
     title = Column(String, nullable=False)
@@ -55,9 +61,9 @@ class Product(Base):
 class Message(Base):
     __tablename__ = "messages"
 
-    id = Column(Integer, primary_key=True)
-    product_id = Column(Integer, ForeignKey("products.id"))
-    sender_id = Column(Integer, ForeignKey("users.id"))
+    id = Column(String(32), primary_key=True, default=generate_uuid)
+    product_id = Column(String(32), ForeignKey("products.id"))
+    sender_id = Column(String(32), ForeignKey("users.id"))
 
     text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -68,8 +74,8 @@ class Message(Base):
 class Order(Base):
     __tablename__ = "orders"
 
-    id = Column(Integer, primary_key=True)
-    buyer_id = Column(Integer, ForeignKey("users.id"))
-    product_id = Column(Integer, ForeignKey("products.id"))
+    id = Column(String(32), primary_key=True, default=generate_uuid)
+    buyer_id = Column(String(32), ForeignKey("users.id"))
+    product_id = Column(String(32), ForeignKey("products.id"))
     status = Column(String, default="initiated")  # initiated, confirmed, completed, cancelled
     created_at = Column(DateTime, default=datetime.utcnow)

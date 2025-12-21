@@ -19,7 +19,7 @@ def get_db():
 @router.post("/", response_model=schemas.Product)
 def create_product(
     data: schemas.ProductCreate,
-    seller_id: int,
+    seller_id: str,
     db: Session = Depends(get_db)
 ):
     """Создать новый товар (из Telegram-бота или фронтенда)"""
@@ -54,7 +54,7 @@ def list_products(
         "Listing products: search=%s, section=%s, filters=[size=%s, color=%s, style=%s, gender=%s, condition=%s]",
         search, section, size, color, style, gender, condition
     )
-    return crud.list_products(
+    products = crud.list_products(
         db,
         search=search,
         category_id=category_id,
@@ -67,12 +67,22 @@ def list_products(
         skip=skip,
         limit=limit
     )
+    
+    # Добавляем seller_username для каждого товара
+    for product in products:
+        if product.seller:
+            product.seller_username = product.seller.username
+    
+    return products
 
 
 @router.get("/{product_id}", response_model=schemas.Product)
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(product_id: str, db: Session = Depends(get_db)):
     """Получить товар по ID"""
     product = crud.get_product(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    # Добавляем username продавца в response
+    if product.seller:
+        product.seller_username = product.seller.username
     return product

@@ -44,7 +44,7 @@ def list_categories(db: Session):
     return db.query(models.Category).all()
 
 
-def create_product(db: Session, data: schemas.ProductCreate, seller_id: int):
+def create_product(db: Session, data: schemas.ProductCreate, seller_id: str):
     product = models.Product(
         **data.dict(),
         seller_id=seller_id
@@ -100,7 +100,7 @@ def list_products(
     return q.order_by(models.Product.created_at.desc()).offset(skip).limit(limit).all()
 
 
-def get_product(db: Session, product_id: int):
+def get_product(db: Session, product_id: str):
     """Получить товар по ID"""
     return db.query(models.Product).filter(models.Product.id == product_id).first()
 
