@@ -16,6 +16,29 @@ class BackendAPI:
             response.raise_for_status()
             return response.json()
 
+    async def list_products(self, section: str = "market", limit: int = 10) -> list:
+        """
+        Получить список товаров из backend
+        """
+        url = f"{self.base_url}/products/"
+        params = {
+            "section": section,
+            "limit": limit,
+        }
+
+        logger.info("Fetching products: section=%s limit=%s", section, limit)
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                products = response.json()
+                logger.info("Retrieved %s products from backend", len(products))
+                return products
+        except httpx.HTTPError as e:
+            logger.error("Error fetching products: %s", e)
+            return []
+
     async def create_product(self, seller_id: int, data: dict) -> dict:
         url = f"{self.base_url}/products/"
 
@@ -24,6 +47,12 @@ class BackendAPI:
             "price": data["price"],
             "description": data["description"],
             "category": data["category"],
+            "size": data.get("size", ""),
+            "color": data.get("color", ""),
+            "style": data.get("style", ""),
+            "gender": data.get("gender", ""),
+            "condition": data.get("condition", ""),
+            "section": data.get("section", "market"),
             "image_url": data["image_url"],
         }   
 
@@ -32,9 +61,9 @@ class BackendAPI:
         }
 
         logger.info(
-            "Sending product to backend: seller_id=%s payload=%s",
+            "Sending product to backend: seller_id=%s title=%s",
             seller_id,
-            payload,
+            payload.get("title"),
         )
 
         async with httpx.AsyncClient(timeout=10.0) as client:

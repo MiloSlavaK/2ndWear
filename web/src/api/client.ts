@@ -6,6 +6,22 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+// Логирование для диагностики
+const log = {
+    info: (msg: string, data?: any) => {
+        console.log(`[API] ${msg}`, data ? data : '');
+    },
+    error: (msg: string, error?: any) => {
+        console.error(`[API ERROR] ${msg}`, error ? error : '');
+    },
+    request: (method: string, url: string, options?: any) => {
+        console.log(`[API REQUEST] ${method} ${url}`, options || '');
+    },
+    response: (status: number, url: string, data?: any) => {
+        console.log(`[API RESPONSE] ${status} ${url}`, data ? `(${typeof data === 'object' ? Object.keys(data).length + ' items' : data})` : '');
+    },
+};
+
 interface FetchOptions {
     method?: string;
     headers?: Record<string, string>;
@@ -14,21 +30,38 @@ interface FetchOptions {
 
 async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-        method: options.method || "GET",
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
-        ...(options.body && { body: options.body }),
-    });
+    
+    log.request(options.method || 'GET', url);
+    
+    try {
+        const response = await fetch(url, {
+            method: options.method || "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...options.headers,
+            },
+            ...(options.body && { body: options.body }),
+        });
 
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || `API Error: ${response.status}`);
+        log.response(response.status, url);
+
+        if (!response.ok) {
+            let error: any = { status: response.status };
+            try {
+                error = await response.json();
+            } catch {
+                error.detail = await response.text();
+            }
+            throw new Error(error.detail || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        log.info(`✓ ${endpoint} returned ${Array.isArray(data) ? data.length : 1} items`);
+        return data;
+    } catch (error) {
+        log.error(`${endpoint}`, error);
+        throw error;
     }
-
-    return response.json();
 }
 
 export interface Product {

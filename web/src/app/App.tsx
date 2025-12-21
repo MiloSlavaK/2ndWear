@@ -18,6 +18,16 @@ export default function App() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // ДИАГНОСТИКА: покажем API URL на загрузке
+    useEffect(() => {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        console.log("🔍 FRONTEND DIAGNOSTICS:");
+        console.log("  API_BASE_URL:", apiUrl);
+        console.log("  Current Section:", activeSection);
+        console.log("  Mode:", import.meta.env.MODE);
+        console.log("  Dev:", import.meta.env.DEV);
+    }, []);
+
     // Загрузка товаров с бэкенда
     useEffect(() => {
         async function loadProducts() {
@@ -25,22 +35,24 @@ export default function App() {
                 setLoading(true);
                 setError(null);
 
-                console.log("Loading products from FastAPI...");
-                // Передаём фильтры на сервер для оптимизации
-                const loadedProducts = await getProducts({
+                const filters = {
                     section: activeSection,
                     ...(selectedStyle !== "Все" && { style: selectedStyle }),
                     ...(selectedColor !== "Все" && { color: selectedColor }),
                     ...(selectedSize !== "Все" && { size: selectedSize }),
                     ...(selectedGender !== "Все" && { gender: selectedGender }),
                     ...(selectedCondition !== "Все" && { condition: selectedCondition }),
-                });
+                };
 
-                console.log(`Loaded ${loadedProducts.length} products from backend`);
+                console.log("📦 Fetching products with filters:", filters);
+                const loadedProducts = await getProducts(filters);
+
+                console.log(`✓ Successfully loaded ${loadedProducts.length} products`);
                 setProducts(loadedProducts);
             } catch (error) {
-                console.error("Error loading products:", error);
-                setError("Failed to load products. Please check your connection.");
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                console.error("❌ Failed to load products:", errorMsg);
+                setError(`Failed to load products: ${errorMsg}`);
             } finally {
                 setLoading(false);
             }

@@ -62,7 +62,8 @@ services:
     depends_on:
       - backend
     environment:
-      VITE_API_URL: http://backend:8000
+      # Браузер на хост машине должен обращаться к localhost, не к backend (это сервис Docker)
+      VITE_API_URL: http://localhost:8000
     ports:
       - "5173:5173"
     volumes:
@@ -71,12 +72,4 @@ services:
     command: npm run dev -- --host 0.0.0.0
 
 volumes:
-  postgres_data:
-    environment:
-      BACKEND_API_URL: http://backend:8000
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    restart: always 
-
-volumes:
-  postgres_data:
+  postgres_data: 
