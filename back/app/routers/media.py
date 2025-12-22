@@ -34,13 +34,21 @@ async def download_image(image_key: str):
         logger.info("Downloading image: key=%s", image_key)
         
         # Retrieve from MinIO
-        image_bytes = storage.get_object(image_key)
+        image_bytes, content_length = storage.get_object(image_key)
         
-        # Stream back to client
+        # Create BytesIO stream and reset position to start
+        file_stream = io.BytesIO(image_bytes)
+        file_stream.seek(0)  # CRITICAL: Reset to beginning of stream
+        
+        # Stream back to client with proper headers
         return StreamingResponse(
-            io.BytesIO(image_bytes),
+            file_stream,
             media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=86400"}  # Cache for 1 day
+            headers={
+                "Cache-Control": "public, max-age=86400",  # Cache for 1 day
+                "Content-Length": str(content_length),  # Required for proper streaming
+                "Accept-Ranges": "bytes"  # Support range requests
+            }
         )
     except Exception as e:
         logger.exception("Failed to download image: %s", e)

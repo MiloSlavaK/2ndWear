@@ -42,7 +42,14 @@ class MinioStorage:
             "url": f"/media/download/{object_name}"  # Backend proxy path
         }
 
-    def get_object(self, object_name: str) -> bytes:
-        """Retrieve file from storage (for backend proxy)."""
+    def get_object(self, object_name: str) -> tuple:
+        """Retrieve file from storage (for backend proxy).
+        
+        Returns tuple of (bytes, content_length) to properly stream with Content-Length header.
+        """
         response = self.client.get_object(self.bucket, object_name)
-        return response.read()
+        file_data = response.read()
+        # Ensure response is properly closed
+        response.close()
+        response.release_conn()
+        return file_data, len(file_data)

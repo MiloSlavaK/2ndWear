@@ -1,4 +1,5 @@
 import { Send } from "lucide-react";
+import { useState } from "react";
 
 interface ProductCardProps {
   product: {
@@ -15,10 +16,26 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const [imageError, setImageError] = useState(false);
   const displayContact = product.seller_username
     ? `@${product.seller_username}`
     : product.seller_contact || "Нет контакта";
-  const imageSrc = product.image_url || "https://via.placeholder.com/400x500?text=No+Image";
+  
+  // Use API_BASE_URL for absolute paths, keep relative for full URLs
+  const getImageSrc = () => {
+    if (!product.image_url) {
+      return "https://via.placeholder.com/400x500?text=No+Image";
+    }
+    // If it's a relative path starting with /, prepend API base URL
+    if (product.image_url.startsWith("/")) {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      return `${apiUrl}${product.image_url}`;
+    }
+    // If it's already a full URL, use as-is
+    return product.image_url;
+  };
+  
+  const imageSrc = imageError ? "https://via.placeholder.com/400x500?text=Load+Error" : getImageSrc();
   const orderIdShort = product.id ? product.id.slice(0, 6) : "----";
   const contactHref = product.seller_username
     ? `https://t.me/${product.seller_username}`
@@ -27,11 +44,19 @@ export function ProductCard({ product }: ProductCardProps) {
       : undefined;
   return (
     <div className="bg-card rounded-lg overflow-hidden border border-border hover:shadow-lg transition-shadow duration-300">
-      <div className="aspect-[3/4] overflow-hidden">
+      <div className="aspect-[3/4] overflow-hidden bg-muted">
         <img
           src={imageSrc}
           alt={product.title}
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          onError={() => {
+            console.error(`Failed to load image: ${product.image_url}`);
+            setImageError(true);
+          }}
+          onLoad={() => {
+            console.log(`Image loaded successfully: ${product.image_url}`);
+            setImageError(false);
+          }}
         />
       </div>
       <div className="p-4">
