@@ -8,8 +8,7 @@ from aiogram.fsm.context import FSMContext
 from app.states.add_product import AddProductState
 from app.api.backend import BackendAPI
 from app.constants import STYLES, COLORS, SIZES, GENDERS, CLOTHING_CATEGORIES, CONDITIONS, SECTIONS
-from app.config.settings import settings
-import httpx
+import io
 
 router = Router()
 api = BackendAPI()
@@ -232,17 +231,42 @@ async def add_section(message: Message, state: FSMContext):
 async def add_photo(message: Message, state: FSMContext, bot: Bot):
     photo_id = message.photo[-1].file_id
 
-    # Download file from Telegram via HTTP using BOT_TOKEN
-    file = await bot.get_file(photo_id)
-    file_path = file.file_path
-    tg_file_url = f"https://api.telegram.org/file/bot{settings.bot_token}/{file_path}"
+    try:
+        # Получаем информацию о файле
+        file = await bot.get_file(photo_id)
+        
+        # Скачиваем файл в BytesIO используя встроенный метод aiogram
+        file_bytes_io: io.BytesIO = await bot.download_file(file.file_path)
+        
+        # Получаем bytes из BytesIO
+        image_bytes = file_bytes_io.getvalue()
+        
+        logger.info("Photo downloaded: size=%d bytes", len(image_bytes))
+        
+    except Exception as e:
+        logger.exception("Failed to download photo from Telegram: %s", e)
+        await message.answer(
+            "❌ Ошибка при загрузке фото из Telegram.\n"
+            "Попробуйте отправить другое фото или обратитесь в поддержку."
+        )
+        return
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(tg_file_url)
-        resp.raise_for_status()
-        image_bytes = resp.content
-
-    upload_result = await api.upload_image(image_bytes, filename="product.jpg")
+    try:
+        # Загружаем фото на backend (MinIO)
+        upload_result = await api.upload_image(image_bytes, filename="product.jpg")
+        
+        if not upload_result.get("image_url"):
+            raise ValueError("Backend не вернул image_url")
+        
+        logger.info("Photo uploaded to storage: url=%s", upload_result.get("image_url"))
+        
+    except Exception as e:
+        logger.exception("Failed to upload photo to backend: %s", e)
+        await message.answer(
+            "❌ Ошибка при загрузке фото на сервер.\n"
+            "Попробуйте ещё раз или обратитесь в поддержку."
+        )
+        return
 
     await state.update_data(image_url=upload_result.get("image_url"), image_key=upload_result.get("image_key"))
 
@@ -319,10 +343,12 @@ async def confirm_add_product(message: Message, state: FSMContext, user_id: str)
             product['id'],
         )
     except Exception as e:
+        logger.exception("Failed to create product: user_id=%s error=%s", user_id, e)
         await message.answer(
-            "❌ Ошибка при сохранении товара.\n"
-            "Попробуйте позже или свяжитесь с поддержкой.",
+            "❌ Ошибка при сохранении товара на сервере.\n"
+            "Данные не потеряны. Попробуйте ещё раз или обратитесь в поддержку.\n\n"
+            f"Код ошибки: {type(e).__name__}",
             reply_markup=main_menu()
         )
-        logger.exception("Failed to create product: user_id=%s error=%s", user_id, e)
+        await state.clear()
         return

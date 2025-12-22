@@ -61,5 +61,7 @@ async def buy_handler(message: Message, state: FSMContext, user_id: int):
         logger.exception("Error in buy_handler: %s", e)
         await message.answer(
             "❌ Ошибка при загрузке товаров.\n"
-            "Попробуйте позже."
+            "Попробуйте позже или обратитесь в поддержку.\n\n"
+            f"Код ошибки: {type(e).__name__}",
+            reply_markup=main_menu()
         )

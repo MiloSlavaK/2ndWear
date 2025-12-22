@@ -89,9 +89,29 @@ class BackendAPI:
         return response.json()
 
     async def upload_image(self, file_bytes: bytes, filename: str, content_type: str | None = None) -> dict:
+        """Загрузить изображение на backend (MinIO через /media/upload)"""
         url = f"{self.base_url}/media/upload"
         files = {"file": (filename, file_bytes, content_type or "image/jpeg")}
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.post(url, files=files)
-        response.raise_for_status()
-        return response.json()
+        
+        logger.info("Uploading image to backend: filename=%s size=%d bytes", filename, len(file_bytes))
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, files=files)
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            logger.info("Image uploaded successfully: url=%s", result.get("image_url"))
+            return result
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "Backend returned error while uploading image: status=%s body=%s",
+                e.response.status_code,
+                e.response.text,
+            )
+            raise
+        except Exception as e:
+            logger.error("Failed to upload image: %s", e)
+            raise
