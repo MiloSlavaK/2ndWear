@@ -8,6 +8,17 @@ from aiogram.fsm.context import FSMContext
 from app.states.add_product import AddProductState
 from app.api.backend import BackendAPI
 from app.constants import STYLES, COLORS, SIZES, GENDERS, CLOTHING_CATEGORIES, CONDITIONS, SECTIONS
+from app.keyboards.add_product import (
+    contact_request_kb,
+    categories_kb,
+    sizes_kb,
+    colors_kb,
+    styles_kb,
+    genders_kb,
+    conditions_kb,
+    sections_kb,
+    confirm_kb,
+)
 import io
 
 router = Router()
@@ -30,11 +41,7 @@ async def start_add_product(message: Message, state: FSMContext):
         )
     else:
         # Нет username → запросим контакт
-        keyboard = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="📱 Отправить контакт", request_contact=True)]],
-            resize_keyboard=True,
-            one_time_keyboard=True,
-        )
+        keyboard = contact_request_kb()
         await state.set_state(AddProductState.contact)
         await message.answer(
             "🔐 У вас нет публичного username в Telegram.\n"
@@ -88,12 +95,7 @@ async def add_description(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
     await state.set_state(AddProductState.category)
     
-    # Создаём клавиатуру из констант
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=cat)] for cat in CLOTHING_CATEGORIES],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    keyboard = categories_kb()
     await message.answer("🏷 Выберите категорию товара:", reply_markup=keyboard)
 
 
@@ -104,31 +106,30 @@ async def add_category(message: Message, state: FSMContext):
         return
     
     await state.update_data(category=message.text)
-    
-    # Клавиатура с размерами
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=size)] for size in SIZES],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    # Клавиатура с размерами (учитываем обувь)
+    keyboard = sizes_kb(category=message.text)
     await state.set_state(AddProductState.size)
     await message.answer("📏 Выберите размер:", reply_markup=keyboard)
 
 
 @router.message(AddProductState.size)
 async def add_size(message: Message, state: FSMContext):
-    if message.text not in SIZES:
+    data = await state.get_data()
+    category = data.get("category")
+    # Для обуви допустимы числовые размеры
+    valid_sizes = SIZES
+    from app.constants import SHOE_SIZES
+    if category == "Обувь":
+        valid_sizes = SHOE_SIZES
+
+    if message.text not in valid_sizes:
         await message.answer("❌ Пожалуйста, выберите размер из предложенных вариантов")
         return
-        
+
     await state.update_data(size=message.text)
     
-    # Клавиатура с цветами - 2 в ряд
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=color)] for color in COLORS],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    # Клавиатура с цветами
+    keyboard = colors_kb()
     await state.set_state(AddProductState.color)
     await message.answer("🎨 Выберите цвет:", reply_markup=keyboard)
 
@@ -141,19 +142,7 @@ async def add_color(message: Message, state: FSMContext):
         
     await state.update_data(color=message.text)
     
-    # Клавиатура со стилями - по 2 в ряд для компактности
-    keyboard_rows = []
-    for i in range(0, len(STYLES), 2):
-        row = [KeyboardButton(text=STYLES[i])]
-        if i + 1 < len(STYLES):
-            row.append(KeyboardButton(text=STYLES[i + 1]))
-        keyboard_rows.append(row)
-    
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=keyboard_rows,
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    keyboard = styles_kb()
     await state.set_state(AddProductState.style)
     await message.answer("👗 Выберите стиль:", reply_markup=keyboard)
 
@@ -166,11 +155,7 @@ async def add_style(message: Message, state: FSMContext):
         
     await state.update_data(style=message.text)
     
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=gender)] for gender in GENDERS],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    keyboard = genders_kb()
     await state.set_state(AddProductState.gender)
     await message.answer("👥 Для кого предназначено:", reply_markup=keyboard)
 
@@ -183,11 +168,7 @@ async def add_gender(message: Message, state: FSMContext):
         
     await state.update_data(gender=message.text)
     
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=cond)] for cond in CONDITIONS],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    keyboard = conditions_kb()
     await state.set_state(AddProductState.condition)
     await message.answer("✨ Состояние товара:", reply_markup=keyboard)
 
@@ -200,15 +181,7 @@ async def add_condition(message: Message, state: FSMContext):
         
     await state.update_data(condition=message.text)
     
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="market")],
-            [KeyboardButton(text="swop")],
-            [KeyboardButton(text="charity")],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    keyboard = sections_kb()
     await state.set_state(AddProductState.section)
     
     # Показываем описание каждого раздела
@@ -284,14 +257,7 @@ async def add_photo(message: Message, state: FSMContext, bot: Bot):
         "Подтвердить добавление?"
     )
 
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="✅ Подтвердить")],
-            [KeyboardButton(text="❌ Отменить")],
-        ],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    keyboard = confirm_kb()
 
     await state.set_state(AddProductState.confirm)
     await message.answer_photo(photo_id, caption=text, reply_markup=keyboard)

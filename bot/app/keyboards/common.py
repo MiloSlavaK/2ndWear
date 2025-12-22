@@ -6,6 +6,7 @@ def main_menu():
         keyboard=[
             [KeyboardButton(text="📤 Добавить товар")],
             [KeyboardButton(text="🛍 Купить")],
+            [KeyboardButton(text="❓ FAQ")],
         ],
         resize_keyboard=True
     )
