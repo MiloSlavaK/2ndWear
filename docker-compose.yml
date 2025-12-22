@@ -4,16 +4,18 @@ services:
   postgres:
     image: postgres:15
     container_name: postgres
+    env_file:
+      - ./.env
     environment:
-      POSTGRES_DB: secondwear
-      POSTGRES_USER: secondwear
-      POSTGRES_PASSWORD: secondwear
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U secondwear -d secondwear"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,38 +27,42 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - ./.env
     environment:
-      DATABASE_URL: postgresql+psycopg2://secondwear:secondwear@postgres:5432/secondwear
-      FRONTEND_URL: http://localhost:5173
-      EXTERNAL_FRONTEND_URL: http://84.252.140.49:5173
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT}
+      EXTERNAL_FRONTEND_URL: http://${HOST_IP}:${FRONTEND_PORT}
       TELEGRAM_BOT_URL: http://telegram_bot:8080
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: products
-      MINIO_SECURE: "false"
+      MINIO_ENDPOINT: http://minio:${MINIO_PORT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_SECURE: "${MINIO_SECURE}"
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT}:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   minio:
     image: minio/minio
     container_name: minio
+    env_file:
+      - ./.env
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    command: server /data --console-address ":9001"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
   
   redis:
     image: redis:7
     container_name: redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
   
   telegram_bot:
     build:
@@ -71,8 +77,8 @@ services:
       - ./.env
     environment:
       BACKEND_API_URL: http://backend:8000
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
 
   web:
     build:
@@ -80,11 +86,13 @@ services:
     container_name: web_frontend
     depends_on:
       - backend
+    env_file:
+      - ./.env
     environment:
-      # Браузер на хост машине должен обращаться к localhost, не к backend (это сервис Docker)
-      VITE_API_URL: http://localhost:8000
+      # Браузер обращается к backend по внешнему IP VM
+      VITE_API_URL: http://${HOST_IP}:${BACKEND_PORT}
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT}:5173"
     volumes:
       - ./web:/app
       - /app/node_modules

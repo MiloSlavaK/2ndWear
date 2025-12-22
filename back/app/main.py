@@ -25,10 +25,14 @@ TELEGRAM_BOT_URL = os.getenv("TELEGRAM_BOT_URL", "http://localhost:3000")
 # Получаем внешний URL из переменной окружения (для деплоя)
 EXTERNAL_FRONTEND_URL = os.getenv("EXTERNAL_FRONTEND_URL", "")
 
-# Формируем список разрешенных origins
-allowed_origins = [FRONTEND_URL, TELEGRAM_BOT_URL, "http://localhost:5173", "http://localhost:3000"]
+# Формируем список разрешенных origins (все из .env)
+allowed_origins = [FRONTEND_URL, TELEGRAM_BOT_URL]
 if EXTERNAL_FRONTEND_URL:
     allowed_origins.append(EXTERNAL_FRONTEND_URL)
+
+# Добавляем localhost только для локальной разработки
+if os.getenv("HOST_IP", "localhost") == "localhost":
+    allowed_origins.extend(["http://localhost:5173", "http://localhost:3000"])
 
 app.add_middleware(
     CORSMiddleware,
