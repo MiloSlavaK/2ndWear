@@ -1,5 +1,6 @@
 # app/services/storage.py
 import os
+import io
 from minio import Minio
 from minio.error import S3Error
 from datetime import timedelta
@@ -25,25 +26,23 @@ class MinioStorage:
             self.client.make_bucket(self.bucket)
 
     def upload_bytes(self, data: bytes, content_type: str = "image/jpeg") -> dict:
-        """Upload bytes to storage and return public URL and key."""
+        """Upload bytes to storage and return image_key (for secure backend proxy)."""
         object_name = f"{uuid.uuid4().hex}.jpg"
+        data_stream = io.BytesIO(data)
         self.client.put_object(
             bucket_name=self.bucket,
             object_name=object_name,
-            data=data,
+            data=data_stream,
             length=len(data),
             content_type=content_type,
         )
 
         return {
             "key": object_name,
-            "url": self.get_presigned_url(object_name)
+            "url": f"/media/download/{object_name}"  # Backend proxy path
         }
 
-    def get_presigned_url(self, object_name: str, expires: int = 60 * 60 * 24 * 7) -> str:
-        """Generate presigned URL for object (default 7 days)."""
-        return self.client.presigned_get_object(
-            bucket_name=self.bucket,
-            object_name=object_name,
-            expires=timedelta(seconds=expires),
-        )
+    def get_object(self, object_name: str) -> bytes:
+        """Retrieve file from storage (for backend proxy)."""
+        response = self.client.get_object(self.bucket, object_name)
+        return response.read()

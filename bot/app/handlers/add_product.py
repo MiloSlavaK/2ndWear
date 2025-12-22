@@ -255,9 +255,6 @@ async def add_photo(message: Message, state: FSMContext, bot: Bot):
         # Загружаем фото на backend (MinIO)
         upload_result = await api.upload_image(image_bytes, filename="product.jpg")
         
-        if not upload_result.get("image_url"):
-            raise ValueError("Backend не вернул image_url")
-        
         logger.info("Photo uploaded to storage: url=%s", upload_result.get("image_url"))
         
     except Exception as e:
