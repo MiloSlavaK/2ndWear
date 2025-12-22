@@ -1,24 +1,9 @@
 import { useState, useEffect } from "react";
 import { ProductCard } from "./components/ProductCard";
 import { FilterBar } from "./components/FilterBar";
-import { db } from "../firebase"; // Импортируйте ваш firebase config
-import { collection, getDocs } from "firebase/firestore";
+import { getProducts } from "../api/client";
+import type { Product } from "../api/client";
 import headerImage from "../assets/header.png";
-
-interface Product {
-    id: string; // Изменили на string для Firestore ID
-    name: string;
-    price: number;
-    size: string;
-    color: string;
-    style: string;
-    gender: string;
-    condition: string;
-    clothingCategory: string;
-    image: string;
-    telegramLink: string;
-    section: "market" | "swop" | "charity";
-}
 
 export default function App() {
     const [activeSection, setActiveSection] = useState<"market" | "swop" | "charity">("market");
@@ -29,70 +14,63 @@ export default function App() {
     const [selectedClothingCategory, setSelectedClothingCategory] = useState("Все");
     const [selectedCondition, setSelectedCondition] = useState("Все");
 
-    // Новые состояния для Firebase
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Загрузка товаров из Firebase
+    // ДИАГНОСТИКА: покажем API URL на загрузке
+    useEffect(() => {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        console.log("🔍 FRONTEND DIAGNOSTICS:");
+        console.log("  API_BASE_URL:", apiUrl);
+        console.log("  Current Section:", activeSection);
+        console.log("  Mode:", import.meta.env.MODE);
+        console.log("  Dev:", import.meta.env.DEV);
+    }, []);
+
+    // Загрузка товаров с бэкенда
     useEffect(() => {
         async function loadProducts() {
             try {
                 setLoading(true);
                 setError(null);
 
-                console.log("Начинаю загрузку товаров из Firebase...");
-                const querySnapshot = await getDocs(collection(db, "products"));
-                console.log(`Получено ${querySnapshot.size} товаров из Firebase`);
+                const filters = {
+                    section: activeSection,
+                    ...(selectedStyle !== "Все" && { style: selectedStyle }),
+                    ...(selectedColor !== "Все" && { color: selectedColor }),
+                    ...(selectedSize !== "Все" && { size: selectedSize }),
+                    ...(selectedGender !== "Все" && { gender: selectedGender }),
+                    ...(selectedCondition !== "Все" && { condition: selectedCondition }),
+                };
 
-                const productsList: Product[] = [];
+                console.log("📦 Fetching products with filters:", filters);
+                const loadedProducts = await getProducts(filters);
 
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    console.log(`Товар ${doc.id}:`, data);
-
-                    // Маппинг полей из Firebase в нашу структуру
-                    productsList.push({
-                        id: doc.id, // Firestore ID
-                        name: data.name || data.название || "Без названия",
-                        price: Number(data.price) || Number(data.цена) || 0,
-                        size: data.size || data.размер || "",
-                        color: data.color || data.цвет || "",
-                        style: data.style || data.стиль || "👖 Casual (Повседневный)",
-                        gender: data.gender || data.пол || "Унисекс",
-                        condition: data.condition || data.состояние || "Хорошее",
-                        clothingCategory: data.clothingCategory || data.category || data.категория || "Одежда",
-                        image: data.image || data.imageUrl || data.photo || "https://images.unsplash.com/photo-1558769132-cb1adedebc1a?w=400",
-                        telegramLink: data.telegramLink || data.telegram || "https://t.me/your2ndWearbot",
-                        section: (data.section || data.раздел || "market") as "market" | "swop" | "charity"
-                    });
-                });
-
-                setProducts(productsList);
-                console.log(`Загружено ${productsList.length} товаров`);
-
+                console.log(`✓ Successfully loaded ${loadedProducts.length} products`);
+                setProducts(loadedProducts);
             } catch (error) {
-                console.error("Ошибка загрузки товаров:", error);
-                setError("Не удалось загрузить товары. Проверьте подключение к базе данных.");
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                console.error("❌ Failed to load products:", errorMsg);
+                setError(`Failed to load products: ${errorMsg}`);
             } finally {
                 setLoading(false);
             }
         }
 
         loadProducts();
-    }, []);
+    }, [activeSection, selectedStyle, selectedColor, selectedSize, selectedGender, selectedCondition]);
 
-    // Фильтрация товаров
+    // Локальная фильтрация для полей, которые могут не быть на сервере
     const filteredProducts = products.filter((product) => {
-        const sectionMatch = product.section === activeSection;
         const styleMatch = selectedStyle === "Все" || product.style === selectedStyle;
         const colorMatch = selectedColor === "Все" || product.color === selectedColor;
         const sizeMatch = selectedSize === "Все" || product.size === selectedSize;
         const genderMatch = selectedGender === "Все" || product.gender === selectedGender;
-        const clothingCategoryMatch = selectedClothingCategory === "Все" || product.clothingCategory === selectedClothingCategory;
+        const categoryMatch = selectedClothingCategory === "Все" || product.title.includes(selectedClothingCategory);
         const conditionMatch = selectedCondition === "Все" || product.condition === selectedCondition;
 
-        return sectionMatch && styleMatch && colorMatch && sizeMatch && genderMatch && clothingCategoryMatch && conditionMatch;
+        return styleMatch && colorMatch && sizeMatch && genderMatch && categoryMatch && conditionMatch;
     });
 
     const handleReset = () => {
@@ -119,12 +97,11 @@ export default function App() {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                {/* Отладочная информация */}
+                {/* Debug Info */}
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-700">
-                        🔗 Подключено к Firebase | Товаров в базе: {products.length} |
-                        Показано: {filteredProducts.length} |
-                        Раздел: {activeSection === "market" ? "Маркет" : activeSection === "swop" ? "Обмен" : "Бесплатно"}
+                        🔗 Connected to FastAPI | Total: {products.length} | Shown: {filteredProducts.length} |
+                        Section: {activeSection === "market" ? "Marketplace" : activeSection === "swop" ? "Swap" : "Free"}
                     </p>
                 </div>
 
@@ -138,7 +115,7 @@ export default function App() {
                                     : "bg-card text-card-foreground border border-border hover:border-primary"
                                 }`}
                         >
-                            Маркет
+                            Marketplace
                         </button>
                         <button
                             onClick={() => setActiveSection("swop")}
@@ -147,7 +124,7 @@ export default function App() {
                                     : "bg-card text-card-foreground border border-border hover:border-primary"
                                 }`}
                         >
-                            Обмен
+                            Swap
                         </button>
                         <button
                             onClick={() => setActiveSection("charity")}
@@ -156,7 +133,7 @@ export default function App() {
                                     : "bg-card text-card-foreground border border-border hover:border-primary"
                                 }`}
                         >
-                            Бесплатно
+                            Free
                         </button>
                     </div>
                 </div>
@@ -181,7 +158,7 @@ export default function App() {
                 {/* Products Grid */}
                 <div className="mb-4">
                     <p className="text-muted-foreground">
-                        Найдено товаров: {loading ? "..." : filteredProducts.length}
+                        Found: {loading ? "..." : filteredProducts.length}
                     </p>
                 </div>
 
@@ -189,38 +166,38 @@ export default function App() {
                     <div className="text-center py-12 bg-red-50 rounded-lg">
                         <p className="text-red-600 font-medium">⚠️ {error}</p>
                         <p className="text-red-500 text-sm mt-2">
-                            Проверьте: 1) Подключение к интернету 2) Настройки Firebase 3) Правила доступа к базе
+                            Make sure: 1) Internet is working 2) FastAPI backend is running on http://localhost:8000
                         </p>
                         <button
                             onClick={() => window.location.reload()}
                             className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
                         >
-                            Попробовать снова
+                            Retry
                         </button>
                     </div>
                 ) : loading ? (
                     <div className="text-center py-12">
                         <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-                        <p className="mt-4 text-muted-foreground">Загружаем товары из базы данных...</p>
-                        <p className="text-sm text-gray-500">Подключение к Firebase...</p>
+                        <p className="mt-4 text-muted-foreground">Loading products...</p>
+                        <p className="text-sm text-gray-500">Connected to FastAPI Backend</p>
                     </div>
                 ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-12">
                         <p className="text-muted-foreground">
                             {products.length === 0
-                                ? "В базе данных пока нет товаров. Добавьте первый товар через Firebase Console или Telegram бот."
-                                : "По вашим фильтрам ничего не найдено. Попробуйте изменить параметры поиска."}
+                                ? "No products available. Add your first item via Telegram bot (@your2ndWearbot)."
+                                : "No products match your filters. Try changing them."}
                         </p>
                         {products.length === 0 && (
                             <div className="mt-6 p-4 bg-yellow-50 rounded-lg max-w-md mx-auto">
                                 <p className="text-sm text-yellow-700">
-                                    💡 Чтобы добавить товар вручную:
+                                    💡 To add a product:
                                 </p>
                                 <ol className="text-sm text-yellow-600 mt-2 text-left list-decimal ml-5">
-                                    <li>Откройте Firebase Console</li>
-                                    <li>Зайдите в Firestore Database</li>
-                                    <li>Нажмите "+ Start collection" → "products"</li>
-                                    <li>Добавьте поля: name, price, section, imageUrl</li>
+                                    <li>Open Telegram</li>
+                                    <li>Find @2ndWearBot</li>
+                                    <li>Press "Add Product" button</li>
+                                    <li>Fill in all product details</li>
                                 </ol>
                             </div>
                         )}
@@ -233,17 +210,17 @@ export default function App() {
                     </div>
                 )}
 
-                {/* Информация о загрузке */}
+                {/* Footer Info */}
                 {!loading && !error && (
                     <div className="mt-8 pt-6 border-t border-gray-200 text-center">
                         <p className="text-sm text-gray-500">
-                            Данные загружены из Firebase. Товаров в базе: {products.length}
+                            Data from 2ndWear Backend. Total products: {products.length}
                         </p>
                         <button
                             onClick={() => window.location.reload()}
                             className="mt-2 text-sm text-blue-600 hover:text-blue-800"
                         >
-                            Обновить данные
+                            Refresh
                         </button>
                     </div>
                 )}
@@ -253,9 +230,9 @@ export default function App() {
             <footer className="bg-card border-t border-border mt-12">
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
                     <div className="text-center text-muted-foreground">
-                        <p>© 2025 2ndWear. Качественный секонд-хенд онлайн</p>
-                        <p className="mt-2">Покупка через Telegram бот</p>
-                        <p className="mt-1 text-sm">Powered by Firebase 🔥 | Товаров в базе: {products.length}</p>
+                        <p>© 2025 2ndWear. Quality secondhand fashion online</p>
+                        <p className="mt-2">Shopping via Telegram Bot</p>
+                        <p className="mt-1 text-sm">Powered by FastAPI ⚡ | {products.length} products available</p>
                     </div>
                 </div>
             </footer>

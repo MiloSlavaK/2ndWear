@@ -5,13 +5,28 @@ from datetime import datetime
 
 
 class UserCreate(BaseModel):
-    username: str
+    username: Optional[str] = None
     telegram_id: Optional[str] = None
+    contact: Optional[str] = None
 
 
 class User(BaseModel):
+    id: str
+    username: Optional[str] = None
+    telegram_id: Optional[str] = None
+    contact: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+class CategoryCreate(BaseModel):
+    name: str
+
+
+class Category(BaseModel):
     id: int
-    username: str
+    name: str
 
     class Config:
         orm_mode = True
@@ -19,20 +34,40 @@ class User(BaseModel):
 
 class ProductCreate(BaseModel):
     title: str
-    description: Optional[str]
+    description: Optional[str] = None
     price: float
-    category: Optional[str]
-    image_url: Optional[str]
+    category_id: Optional[int] = None
+    image_url: Optional[str] = None
+    image_key: Optional[str] = None
+    seller_username: Optional[str] = None
+    seller_contact: Optional[str] = None
+    # Новые поля для фильтрации
+    size: Optional[str] = None
+    color: Optional[str] = None
+    style: Optional[str] = None
+    gender: Optional[str] = None
+    condition: Optional[str] = None
+    section: str = "market"  # market, swop, charity
 
 
 class Product(BaseModel):
-    id: int
+    id: str
     title: str
     description: Optional[str]
     price: float
-    category: Optional[str]
+    category_id: Optional[int]
     image_url: Optional[str]
-    seller_id: int
+    image_key: Optional[str]
+    seller_id: str
+    seller_username: Optional[str] = None  # Username продавца для покупателей
+    seller_contact: Optional[str] = None
+    # Поля фильтрации
+    size: Optional[str]
+    color: Optional[str]
+    style: Optional[str]
+    gender: Optional[str]
+    condition: Optional[str]
+    section: str
     created_at: datetime
 
     class Config:
@@ -40,15 +75,16 @@ class Product(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    product_id: int
-    sender_id: int
+    product_id: str
+    sender_id: str
     text: str
 
 
 class Message(BaseModel):
-    id: int
+    id: str
     text: str
-    sender_id: int
+    sender_id: str
+    product_id: str
     created_at: datetime
 
     class Config:
@@ -56,14 +92,14 @@ class Message(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    buyer_id: int
-    product_id: int
+    buyer_id: str
+    product_id: str
 
 
 class Order(BaseModel):
-    id: int
-    buyer_id: int
-    product_id: int
+    id: str
+    buyer_id: str
+    product_id: str
     status: str
     created_at: datetime
 

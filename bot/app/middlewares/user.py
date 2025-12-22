@@ -27,7 +27,12 @@ class UserMiddleware(BaseMiddleware):
         telegram_id = telegram_user.id
 
         try:
-            user = await self.api.get_or_create_user(telegram_id)
+            username = telegram_user.username
+            contact = None
+            if event.message and event.message.contact:
+                contact = event.message.contact.phone_number
+
+            user = await self.api.get_or_create_user(telegram_id, username=username, contact=contact)
         except Exception:
             logger.exception(
                 "Failed to sync user with backend, continue without user: telegram_id=%s",
