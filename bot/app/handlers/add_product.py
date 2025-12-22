@@ -8,6 +8,8 @@ from aiogram.fsm.context import FSMContext
 from app.states.add_product import AddProductState
 from app.api.backend import BackendAPI
 from app.constants import STYLES, COLORS, SIZES, GENDERS, CLOTHING_CATEGORIES, CONDITIONS, SECTIONS
+from app.config.settings import settings
+import httpx
 
 router = Router()
 api = BackendAPI()
@@ -230,11 +232,17 @@ async def add_section(message: Message, state: FSMContext):
 async def add_photo(message: Message, state: FSMContext, bot: Bot):
     photo_id = message.photo[-1].file_id
 
-    # Download file from Telegram and upload to backend (MinIO)
+    # Download file from Telegram via HTTP using BOT_TOKEN
     file = await bot.get_file(photo_id)
     file_path = file.file_path
-    file_bytes = await bot.download_file(file_path)
-    upload_result = await api.upload_image(file_bytes.read(), filename="product.jpg")
+    tg_file_url = f"https://api.telegram.org/file/bot{settings.bot_token}/{file_path}"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(tg_file_url)
+        resp.raise_for_status()
+        image_bytes = resp.content
+
+    upload_result = await api.upload_image(image_bytes, filename="product.jpg")
 
     await state.update_data(image_url=upload_result.get("image_url"), image_key=upload_result.get("image_key"))
 
